@@ -15,18 +15,26 @@ st.set_page_config(
 # ---------------- 2. Portable Data Loading ----------------
 @st.cache_data
 def load_data():
-    # Relative path: looks in the same folder as app.py
+    # Looks for files in the same folder where app.py is saved
     BASE_DIR = Path(__file__).parent
-    red_path = BASE_DIR / "winequality-red.csv"
-    white_path = BASE_DIR / "winequality-white.csv"
+    
+    # Define file names (Ensure these match your GitHub filenames exactly!)
+    red_file = "winequality-red.csv"
+    white_file = "winequality-white.csv"
+    
+    red_path = BASE_DIR / red_file
+    white_path = BASE_DIR / white_file
 
+    # Error handling if files are missing
     if not red_path.exists() or not white_path.exists():
-        st.error(f"❌ Missing CSV files in: {BASE_DIR}. Please check your GitHub repository.")
+        st.error(f"❌ File Not Found! Searching in: {BASE_DIR}")
+        st.info("Ensure winequality-red.csv and winequality-white.csv are in your GitHub root folder.")
         st.stop()
 
-    # Load with semicolon separator
+    # Read data using semicolon separator (Standard for this UCI dataset)
     red = pd.read_csv(red_path, sep=";")
     red["type"] = "Red"
+    
     white = pd.read_csv(white_path, sep=";")
     white["type"] = "White"
     
@@ -35,81 +43,81 @@ def load_data():
 df = load_data()
 
 # ---------------- 3. Sidebar Filters ----------------
-st.sidebar.title("🔍 Dashboard Filters")
+st.sidebar.title("🔍 Project Filters")
 wine_selection = st.sidebar.multiselect("Select Wine Type", ["Red", "White"], default=["Red", "White"])
-quality_range = st.sidebar.slider("Quality Score Range", int(df.quality.min()), int(df.quality.max()), (5, 8))
+quality_range = st.sidebar.slider("Quality Score Filter", int(df.quality.min()), int(df.quality.max()), (5, 8))
 
-# Data Filtering Logic
+# Apply Filter Logic
 filtered_df = df[
     (df['type'].isin(wine_selection)) & 
     (df['quality'].between(quality_range[0], quality_range[1]))
 ]
 
-# ---------------- 4. Title & Key Metrics ----------------
+# ---------------- 4. Dashboard Header & Metrics ----------------
 st.title("🍷 Vinho Verde Wine Quality Dashboard")
-st.markdown(f"**Analysis of {len(filtered_df)} samples** matching your current filter criteria.")
+st.markdown(f"**Final Project - Winter 2025/2026** | Analyzing **{len(filtered_df)}** wine samples.")
 
 m1, m2, m3, m4 = st.columns(4)
 m1.metric("Avg Quality", f"{filtered_df['quality'].mean():.2f}")
 m2.metric("Avg Alcohol %", f"{filtered_df['alcohol'].mean():.1f}%")
 m3.metric("Avg pH", f"{filtered_df['pH'].mean():.2f}")
-m4.metric("Total Samples", len(filtered_df))
+m4.metric("Samples Count", len(filtered_df))
 
 st.divider()
 
 # ---------------- 5. The 10 Visualizations ----------------
 
-# ROW 1: Distribution and Primary Driver
+# Row 1
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("1. Quality Score Distribution")
-    fig1 = px.histogram(filtered_df, x="quality", color="type", barmode="group", text_auto=True, color_discrete_map={'Red':'#722f37', 'White':'#f3e5ab'})
+    fig1 = px.histogram(filtered_df, x="quality", color="type", barmode="group", text_auto=True)
     st.plotly_chart(fig1, use_container_width=True)
 with col2:
-    st.subheader("2. Alcohol Content by Quality")
-    fig2 = px.box(filtered_df, x="quality", y="alcohol", color="type", color_discrete_map={'Red':'#722f37', 'White':'#f3e5ab'})
+    st.subheader("2. Alcohol vs. Quality")
+    fig2 = px.box(filtered_df, x="quality", y="alcohol", color="type")
     st.plotly_chart(fig2, use_container_width=True)
 
-# ROW 2: Physical & Chemical Balance
+# Row 2
 col3, col4 = st.columns(2)
 with col3:
     st.subheader("3. Fixed Acidity vs. Density")
-    fig3 = px.scatter(filtered_df, x="fixed acidity", y="density", color="type", trendline="ols", opacity=0.5)
+    fig3 = px.scatter(filtered_df, x="fixed acidity", y="density", color="type", trendline="ols")
     st.plotly_chart(fig3, use_container_width=True)
 with col4:
     st.subheader("4. Volatile Acidity Spread")
-    fig4 = px.violin(filtered_df, y="volatile acidity", x="type", color="type", box=True, points="all")
+    fig4 = px.violin(filtered_df, y="volatile acidity", x="type", color="type", box=True)
     st.plotly_chart(fig4, use_container_width=True)
 
-# ROW 3: Chemical Properties
+# Row 3
 col5, col6 = st.columns(2)
 with col5:
-    st.subheader("5. pH Levels (Acidity Balance)")
+    st.subheader("5. pH Levels (Acidity Density)")
     fig5, ax5 = plt.subplots()
-    sns.kdeplot(data=filtered_df, x="pH", hue="type", fill=True, palette={'Red':'#722f37', 'White':'#f3e5ab'})
+    sns.kdeplot(data=filtered_df, x="pH", hue="type", fill=True, ax=ax5)
     st.pyplot(fig5)
 with col6:
-    st.subheader("6. Chlorides vs. Sulphates")
-    fig6 = px.scatter(filtered_df, x="sulphates", y="chlorides", size="alcohol", color="quality", hover_data=['type'])
+    st.subheader("6. Sulphates vs. Chlorides")
+    fig6 = px.scatter(filtered_df, x="sulphates", y="chlorides", size="alcohol", color="quality")
     st.plotly_chart(fig6, use_container_width=True)
 
-# ROW 4: Sulfur Content
+# Row 4
 col7, col8 = st.columns(2)
 with col7:
     st.subheader("7. Total Sulfur Dioxide Analysis")
-    fig7 = px.histogram(filtered_df, x="total sulfur dioxide", color="type", marginal="box", color_discrete_map={'Red':'#722f37', 'White':'#f3e5ab'})
+    fig7 = px.histogram(filtered_df, x="total sulfur dioxide", color="type", marginal="box")
     st.plotly_chart(fig7, use_container_width=True)
 with col8:
     st.subheader("8. Residual Sugar Trends")
-    fig8 = px.strip(filtered_df, x="type", y="residual sugar", color="quality", stripmode="overlay")
+    fig8 = px.strip(filtered_df, x="type", y="residual sugar", color="quality")
     st.plotly_chart(fig8, use_container_width=True)
 
-# ROW 5: Trends & Correlations
+# Row 5
 col9, col10 = st.columns(2)
 with col9:
     st.subheader("9. Free Sulfur Dioxide Trend")
     avg_fsd = filtered_df.groupby('quality')['free sulfur dioxide'].mean().reset_index()
-    fig9 = px.area(avg_fsd, x="quality", y="free sulfur dioxide", title="Avg Free SO2 per Quality Level")
+    fig9 = px.area(avg_fsd, x="quality", y="free sulfur dioxide")
     st.plotly_chart(fig9, use_container_width=True)
 with col10:
     st.subheader("10. Feature Correlation Heatmap")
@@ -119,6 +127,6 @@ with col10:
 
 st.divider()
 
-# ---------------- 6. Raw Data Access ----------------
-with st.expander("📄 Click to View Filtered Raw Data"):
+# ---------------- 6. Raw Data Table ----------------
+with st.expander("📄 View Raw Dataset"):
     st.dataframe(filtered_df, use_container_width=True)
